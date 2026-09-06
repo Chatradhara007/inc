@@ -5,7 +5,7 @@ import type { FeatureCollection } from "geojson";
 import { basemaps, type BasemapId } from "./basemaps";
 import type { ArgoFloat, Coordinate, FieldId, FieldPoint } from "../api/types";
 
-type Props = { basemap: BasemapId; field: FieldId; points: FieldPoint[]; floats: ArgoFloat[]; showArgo: boolean; selected?: Coordinate; onSelect: (point: Coordinate) => void };
+type Props = { basemap: BasemapId; field: FieldId; points: FieldPoint[]; floats: ArgoFloat[]; showArgo: boolean; showSampling: boolean; showSaliency: boolean; selected?: Coordinate; onSelect: (point: Coordinate) => void };
 const sourceId = "ocean-field";
 const floatSource = "argo-floats";
 const selectedSource = "selected-cell";
@@ -21,7 +21,7 @@ function paint(field: FieldId): maplibregl.ExpressionSpecification {
 const toCollection = (points: FieldPoint[]): FeatureCollection => ({ type: "FeatureCollection", features: points.map((p) => ({ type: "Feature", properties: { value: p.value }, geometry: { type: "Point", coordinates: [p.lon, p.lat] } })) });
 const floatsCollection = (floats: ArgoFloat[]): FeatureCollection => ({ type: "FeatureCollection", features: floats.map((f) => ({ type: "Feature", properties: { id: f.id }, geometry: { type: "Point", coordinates: [f.lon, f.lat] } })) });
 
-export function OceanMap({ basemap, field, points, floats, showArgo, selected, onSelect }: Props) {
+export function OceanMap({ basemap, field, points, floats, showArgo, showSampling, showSaliency, selected, onSelect }: Props) {
   const node = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const activeBasemap = useRef<BasemapId>(basemap);
@@ -43,7 +43,17 @@ export function OceanMap({ basemap, field, points, floats, showArgo, selected, o
     const addLayers = () => {
       if (!map.getSource(sourceId)) {
         map.addSource(sourceId, { type: "geojson", data: toCollection(points) });
-        map.addLayer({ id: "ocean-heat", type: "circle", source: sourceId, paint: { "circle-radius": 15, "circle-color": paint(field), "circle-opacity": 0.76, "circle-blur": 0.72 } });
+        map.addLayer({ 
+          id: "ocean-heat", 
+          type: "circle", 
+          source: sourceId, 
+          paint: { 
+            "circle-radius": ["interpolate", ["linear"], ["zoom"], 3, 22, 6, 50, 10, 120], 
+            "circle-color": paint(field), 
+            "circle-opacity": 0.85, 
+            "circle-blur": 1.2 
+          } 
+        });
       }
       if (!map.getSource(floatSource)) {
         map.addSource(floatSource, { type: "geojson", data: floatsCollection(floats) });
@@ -68,7 +78,7 @@ export function OceanMap({ basemap, field, points, floats, showArgo, selected, o
       selection?.setData({ type: "FeatureCollection", features: selected ? [{ type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [selected.lon, selected.lat] } }] : [] });
     };
     if (map.isStyleLoaded()) apply(); else map.once("load", apply);
-  }, [points, floats, showArgo, field, selected, styleRevision]);
+  }, [points, floats, showArgo, showSampling, showSaliency, field, selected, styleRevision]);
 
   useEffect(() => {
     const map = mapRef.current;
