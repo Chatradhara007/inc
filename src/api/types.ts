@@ -26,6 +26,6 @@ export type RunStatus = {
 export interface OceanEmbedApi {
   getStatus(): Promise<RunStatus>;
   getField(field: FieldId, depth: number): Promise<FieldPoint[]>;
-  getProfile(location: Coordinate): Promise<Profile>;
+  getProfile(location: Coordinate): Promise<Profile | null>;
   getArgoFloats(): Promise<ArgoFloat[]>;
 }

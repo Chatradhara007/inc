@@ -13,7 +13,7 @@ const fieldDefinitions: { id: FieldId; label: string; unit: string; depth: boole
   { id: "mld", label: "Mixed-layer depth", unit: "m", depth: false, color: "#b29bf2", short: "MLD" },
 ];
 
-import { isLand } from "./api/mockOceanApi";
+import { geoService } from "./services/GeospatialService";
 
 function formatLocation(location?: Coordinate) {
   if (!location) return "No location selected";
@@ -27,9 +27,27 @@ function regionName(lat: number, lon: number) {
   return "Central Bay of Bengal";
 }
 
-function ProfileChart({ profile, depth }: { profile?: Profile; depth: number }) {
+function ProfileChart({ profile, depth }: { profile?: Profile | null; depth: number }) {
+  if (profile === null) {
+    return (
+      <div className="land-warning-card" style={{
+        padding: "36px 20px",
+        textAlign: "center",
+        background: "rgba(255, 180, 0, 0.06)",
+        border: "1px dashed rgba(255, 180, 0, 0.4)",
+        borderRadius: "10px",
+        margin: "10px 0"
+      }}>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚠️</div>
+        <b style={{ fontSize: "14px", color: "#ffb400", letterSpacing: "0.05em" }}>DATA NOT AVAILABLE</b>
+        <p style={{ fontSize: "12px", marginTop: "10px", color: "#a0b0b8", lineHeight: "1.5" }}>
+          No scientific input data was provided by the model for this ocean coordinate.
+        </p>
+      </div>
+    );
+  }
   if (!profile) return <div className="empty-profile">Click a water cell to cast a virtual profile.</div>;
-  if (isLand(profile.location.lat, profile.location.lon)) {
+  if (geoService.isLand(profile.location.lat, profile.location.lon)) {
     return (
       <div className="land-warning-card" style={{
         padding: "36px 20px",
@@ -86,6 +104,7 @@ export function App() {
   const [basemap, setBasemap] = useState<BasemapId>("basic");
   
   const [railOpen, setRailOpen] = useState(false);
+  const [showGrid, setShowGrid] = useState(true);
   const [showArgo, setShowArgo] = useState(true);
   const [showSampling, setShowSampling] = useState(false);
   const [showSaliency, setShowSaliency] = useState(false);
@@ -94,15 +113,16 @@ export function App() {
   
   const [points, setPoints] = useState<FieldPoint[]>([]);
   const [floats, setFloats] = useState<ArgoFloat[]>([]);
-  const [profile, setProfile] = useState<Profile>();
+  const [profile, setProfile] = useState<Profile | null | undefined>();
   const [status, setStatus] = useState<RunStatus>();
   
   const selectedField = useMemo(() => fieldDefinitions.find((item) => item.id === field)!, [field]);
   const depth = DEPTHS[depthIndex];
 
-  useEffect(() => { 
-    void mockOceanApi.getStatus().then(setStatus); 
-    void mockOceanApi.getArgoFloats().then(setFloats); 
+  useEffect(() => {
+    mockOceanApi.getStatus().then(setStatus);
+    mockOceanApi.getArgoFloats().then(setFloats);
+    geoService.loadMask();
   }, []);
   
   useEffect(() => { 
@@ -111,7 +131,11 @@ export function App() {
   
   useEffect(() => { 
     if (selected) {
-      void mockOceanApi.getProfile(selected).then(setProfile); 
+      if (geoService.isLand(selected.lat, selected.lon)) {
+        setProfile(undefined);
+      } else {
+        void mockOceanApi.getProfile(selected).then(setProfile);
+      }
     } else {
       setProfile(undefined);
     }
@@ -122,7 +146,7 @@ export function App() {
   return (
     <div id="root">
       <div className="map-canvas">
-        <OceanMap basemap={basemap} field={field} points={points} floats={floats} showArgo={showArgo} showSampling={showSampling} showSaliency={showSaliency} selected={selected ?? undefined} onSelect={chooseLocation} />
+        <OceanMap basemap={basemap} field={field} points={points} floats={floats} showGrid={showGrid} showArgo={showArgo} showSampling={showSampling} showSaliency={showSaliency} selected={selected ?? undefined} onSelect={chooseLocation} />
       </div>
       
       <div className="flagline"></div>
@@ -174,6 +198,10 @@ export function App() {
         <div className="rail-divider"></div>
         <div className="rail-section-label">Overlays</div>
         
+        <div className="toggle-row" onClick={() => setShowGrid(!showGrid)}>
+          <span className="t-lbl">0.25° Model Grid</span>
+          <div className={`switch ${showGrid ? "on" : ""}`}></div>
+        </div>
         <div className="toggle-row" onClick={() => setShowArgo(!showArgo)}>
           <span className="t-lbl">ARGO floats</span>
           <div className={`switch ${showArgo ? "on" : ""}`}></div>
@@ -229,20 +257,20 @@ export function App() {
         <div className="pp-head">
           <div className="coord">
             {selected
-              ? isLand(selected.lat, selected.lon)
+              ? geoService.isLand(selected.lat, selected.lon)
                 ? `⛰️ LAND · ${formatLocation(selected)}`
                 : `🌊 OCEAN · ${formatLocation(selected)}`
               : "No location selected"}
           </div>
           <div className="region">
-            {selected && isLand(selected.lat, selected.lon)
+            {selected && geoService.isLand(selected.lat, selected.lon)
               ? "Land Mass (Subsurface Profile N/A)"
               : `${status?.analysisWeek ?? "—"} · nearest ARGO ${profile ? `${profile.nearestArgoKm.toFixed(0)} km` : "—"}`}
           </div>
         </div>
         <div className="pp-body">
           <ProfileChart profile={profile} depth={depth} />
-          {selected && !isLand(selected.lat, selected.lon) && (
+          {selected && !geoService.isLand(selected.lat, selected.lon) && (
             <div className="pp-legend">
               <span><i style={{ background: '#52e0c4' }}></i>OceanEmbed</span>
               <span><i style={{ background: '#ff9d5c' }}></i>ARGO</span>
@@ -253,28 +281,28 @@ export function App() {
             <div className="pp-stat">
               <div className="k">TCHP</div>
               <div className="v">
-                {selected && isLand(selected.lat, selected.lon)
+                {selected && geoService.isLand(selected.lat, selected.lon)
                   ? "N/A"
                   : profile ? `${profile.tchp.toFixed(0)}` : "—"}
-                {selected && !isLand(selected.lat, selected.lon) && <small> kJ cm⁻²</small>}
+                {selected && !geoService.isLand(selected.lat, selected.lon) && <small> kJ cm⁻²</small>}
               </div>
             </div>
             <div className="pp-stat">
               <div className="k">D26</div>
               <div className="v">
-                {selected && isLand(selected.lat, selected.lon)
+                {selected && geoService.isLand(selected.lat, selected.lon)
                   ? "N/A"
                   : profile ? `${profile.d26.toFixed(0)}` : "—"}
-                {selected && !isLand(selected.lat, selected.lon) && <small> m</small>}
+                {selected && !geoService.isLand(selected.lat, selected.lon) && <small> m</small>}
               </div>
             </div>
             <div className="pp-stat">
               <div className="k">Confidence</div>
               <div className="v">
-                {selected && isLand(selected.lat, selected.lon)
+                {selected && geoService.isLand(selected.lat, selected.lon)
                   ? "N/A"
                   : profile ? `±${profile.uncertainty[depthIndex]?.toFixed(2)}` : "—"}
-                {selected && !isLand(selected.lat, selected.lon) && <small> °C</small>}
+                {selected && !geoService.isLand(selected.lat, selected.lon) && <small> °C</small>}
               </div>
             </div>
             <div className="pp-stat">
