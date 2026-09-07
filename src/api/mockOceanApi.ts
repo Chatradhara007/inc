@@ -23,6 +23,36 @@ function nearestArgo(location: Coordinate) {
   return Math.min(...floats.map((f) => Math.hypot(f.lat - location.lat, (f.lon - location.lon) * 0.96) * 111));
 }
 
+export function isLand(lat: number, lon: number): boolean {
+  // Global domain boundaries for North Indian Ocean water
+  if (lat > 24.5 || lat < 2.0 || lon < 45.0 || lon > 98.0) return true;
+
+  // Arabia / Oman / Persian Gulf
+  if (lon < 56.0 && lat > 14.0) return true;
+
+  // Myanmar / Indochina
+  if (lon > 94.0 && lat > 10.0) return true;
+
+  // India peninsula mainland:
+  if (lat >= 8.0 && lat <= 23.5) {
+    const westCoastLon = 72.8 - (20.0 - lat) * 0.35;
+    const eastCoastLon = 77.5 + (lat - 8.0) * 0.75;
+    if (lon >= westCoastLon && lon <= eastCoastLon) {
+      return true;
+    }
+  }
+
+  // Northern India / Pakistan / Ganges Delta
+  if (lat > 22.0 && lon > 66.0 && lon < 91.0) return true;
+
+  // Sri Lanka island mask
+  const dLat = (lat - 7.8) / 1.1;
+  const dLon = (lon - 80.7) / 0.8;
+  if (dLat * dLat + dLon * dLon < 1) return true;
+
+  return false;
+}
+
 export const mockOceanApi: OceanEmbedApi = {
   getStatus: () => wait<RunStatus>({
     analysisWeek: "2026-W35", modelVersion: "oceanembed-v1.0.0", gateStatus: "published",
@@ -31,9 +61,11 @@ export const mockOceanApi: OceanEmbedApi = {
   getArgoFloats: () => wait(floats),
   getField: (field, depth) => {
     const rows: FieldPoint[] = [];
-    for (let lat = domain.minLat + 0.75; lat < domain.maxLat; lat += 1.5) {
-      for (let lon = domain.minLon + 0.75; lon < domain.maxLon; lon += 1.5) {
-        rows.push({ lat, lon, value: fieldValue(field, lat, lon, depth), uncertainty: fieldValue("uncertainty", lat, lon, depth) });
+    for (let lat = domain.minLat + 0.5; lat < domain.maxLat; lat += 0.6) {
+      for (let lon = domain.minLon + 0.5; lon < domain.maxLon; lon += 0.6) {
+        if (!isLand(lat, lon)) {
+          rows.push({ lat, lon, value: fieldValue(field, lat, lon, depth), uncertainty: fieldValue("uncertainty", lat, lon, depth) });
+        }
       }
     }
     return wait(rows);

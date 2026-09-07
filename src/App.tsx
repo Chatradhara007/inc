@@ -13,6 +13,8 @@ const fieldDefinitions: { id: FieldId; label: string; unit: string; depth: boole
   { id: "mld", label: "Mixed-layer depth", unit: "m", depth: false, color: "#b29bf2", short: "MLD" },
 ];
 
+import { isLand } from "./api/mockOceanApi";
+
 function formatLocation(location?: Coordinate) {
   if (!location) return "No location selected";
   return `${location.lat.toFixed(2)}°N, ${location.lon.toFixed(2)}°E`;
@@ -27,6 +29,27 @@ function regionName(lat: number, lon: number) {
 
 function ProfileChart({ profile, depth }: { profile?: Profile; depth: number }) {
   if (!profile) return <div className="empty-profile">Click a water cell to cast a virtual profile.</div>;
+  if (isLand(profile.location.lat, profile.location.lon)) {
+    return (
+      <div className="land-warning-card" style={{
+        padding: "36px 20px",
+        textAlign: "center",
+        background: "rgba(255, 122, 82, 0.06)",
+        border: "1px dashed rgba(255, 122, 82, 0.4)",
+        borderRadius: "10px",
+        margin: "10px 0"
+      }}>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>⛰️</div>
+        <b style={{ fontSize: "14px", color: "#ff7a52", letterSpacing: "0.05em" }}>LAND LOCATION SELECTED</b>
+        <p style={{ fontSize: "12px", marginTop: "10px", color: "#a0b0b8", lineHeight: "1.5" }}>
+          Coordinate <strong>{formatLocation(profile.location)}</strong> is on land mass. Subsurface ocean profiles (0–1000m) are only computed for water cells.
+        </p>
+        <div style={{ fontSize: "11px", marginTop: "12px", color: "#52e0c4", background: "rgba(82,224,196,0.1)", padding: "6px 12px", borderRadius: "6px" }}>
+          💡 Click any ocean area in the Arabian Sea or Bay of Bengal to view profiles.
+        </div>
+      </div>
+    );
+  }
   const values = [...profile.temperature, ...(profile.argo || []), ...(profile.armor3d || [])];
   const low = Math.floor(Math.min(...values) - 0.8);
   const high = Math.ceil(Math.max(...values) + 0.8);
@@ -204,21 +227,60 @@ export function App() {
       <div className={`profile-panel ${selected ? "show" : ""}`}>
         <div className="pp-close" style={{ zIndex: 50, pointerEvents: 'auto' }} onClick={(e) => { e.stopPropagation(); setSelected(null); }}>✕</div>
         <div className="pp-head">
-          <div className="coord">{selected ? formatLocation(selected) : "No location selected"}</div>
-          <div className="region">{status?.analysisWeek ?? "—"} · nearest ARGO {profile ? `${profile.nearestArgoKm.toFixed(0)} km` : "—"}</div>
+          <div className="coord">
+            {selected
+              ? isLand(selected.lat, selected.lon)
+                ? `⛰️ LAND · ${formatLocation(selected)}`
+                : `🌊 OCEAN · ${formatLocation(selected)}`
+              : "No location selected"}
+          </div>
+          <div className="region">
+            {selected && isLand(selected.lat, selected.lon)
+              ? "Land Mass (Subsurface Profile N/A)"
+              : `${status?.analysisWeek ?? "—"} · nearest ARGO ${profile ? `${profile.nearestArgoKm.toFixed(0)} km` : "—"}`}
+          </div>
         </div>
         <div className="pp-body">
           <ProfileChart profile={profile} depth={depth} />
-          <div className="pp-legend">
-            <span><i style={{ background: '#52e0c4' }}></i>OceanEmbed</span>
-            <span><i style={{ background: '#ff9d5c' }}></i>ARGO</span>
-            <span><i style={{ background: '#5f7a86', borderTop: '2px dashed #5f7a86', height: 0 }}></i>ARMOR3D</span>
-          </div>
+          {selected && !isLand(selected.lat, selected.lon) && (
+            <div className="pp-legend">
+              <span><i style={{ background: '#52e0c4' }}></i>OceanEmbed</span>
+              <span><i style={{ background: '#ff9d5c' }}></i>ARGO</span>
+              <span><i style={{ background: '#5f7a86', borderTop: '2px dashed #5f7a86', height: 0 }}></i>ARMOR3D</span>
+            </div>
+          )}
           <div className="pp-stats" style={{ gridTemplateColumns: '1fr 1fr' }}>
-            <div className="pp-stat"><div className="k">TCHP</div><div className="v">{profile?.tchp.toFixed(0) ?? "—"}<small> kJ cm⁻²</small></div></div>
-            <div className="pp-stat"><div className="k">D26</div><div className="v">{profile?.d26.toFixed(0) ?? "—"}<small> m</small></div></div>
-            <div className="pp-stat"><div className="k">Confidence</div><div className="v">±{profile?.uncertainty[depthIndex]?.toFixed(2) ?? "—"}<small> °C</small></div></div>
-            <div className="pp-stat"><div className="k">Gate</div><div className="v ok">{status?.gateStatus ?? "—"}</div></div>
+            <div className="pp-stat">
+              <div className="k">TCHP</div>
+              <div className="v">
+                {selected && isLand(selected.lat, selected.lon)
+                  ? "N/A"
+                  : profile ? `${profile.tchp.toFixed(0)}` : "—"}
+                {selected && !isLand(selected.lat, selected.lon) && <small> kJ cm⁻²</small>}
+              </div>
+            </div>
+            <div className="pp-stat">
+              <div className="k">D26</div>
+              <div className="v">
+                {selected && isLand(selected.lat, selected.lon)
+                  ? "N/A"
+                  : profile ? `${profile.d26.toFixed(0)}` : "—"}
+                {selected && !isLand(selected.lat, selected.lon) && <small> m</small>}
+              </div>
+            </div>
+            <div className="pp-stat">
+              <div className="k">Confidence</div>
+              <div className="v">
+                {selected && isLand(selected.lat, selected.lon)
+                  ? "N/A"
+                  : profile ? `±${profile.uncertainty[depthIndex]?.toFixed(2)}` : "—"}
+                {selected && !isLand(selected.lat, selected.lon) && <small> °C</small>}
+              </div>
+            </div>
+            <div className="pp-stat">
+              <div className="k">Gate</div>
+              <div className="v ok">{status?.gateStatus ?? "—"}</div>
+            </div>
           </div>
         </div>
       </div>
