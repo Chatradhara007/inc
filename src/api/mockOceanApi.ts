@@ -1,4 +1,4 @@
-import { DEPTHS, type ArgoFloat, type Coordinate, type FieldId, type FieldPoint, type OceanEmbedApi, type Profile, type RunStatus } from "./types";
+import { DEPTHS, type ArgoFloat, type Coordinate, type FieldId, type FieldPoint, type OceanEmbedApi, type OceanProfile, type RunStatus } from "./types";
 
 const domain = { minLat: 5, maxLat: 30, minLon: 45, maxLon: 105 };
 const clamp = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n));
@@ -75,14 +75,39 @@ export const mockOceanApi: OceanEmbedApi = {
   getProfile: (location) => {
     // Simulate missing backend data in a specific central region
     if (location.lat > 13.0 && location.lat < 17.0 && location.lon > 63.0 && location.lon < 68.0) {
-      return wait<Profile | null>(null as any);
+      return wait<OceanProfile | null>(null as any);
     }
 
     const point = { lat: clamp(location.lat, domain.minLat, domain.maxLat), lon: clamp(location.lon, domain.minLon, domain.maxLon) };
-    const temperature = DEPTHS.map((depth) => fieldValue("temperature", point.lat, point.lon, depth));
-    const uncertainty = DEPTHS.map((depth) => fieldValue("uncertainty", point.lat, point.lon, depth));
-    const argo = temperature.map((value, i) => value + Math.sin(i * 1.8 + point.lat) * 0.33);
-    const armor3d = temperature.map((value, i) => value + Math.cos(i + point.lon) * 0.5);
-    return wait<Profile>({ location: point, depths: [...DEPTHS], temperature, uncertainty, argo, armor3d, tchp: fieldValue("tchp", point.lat, point.lon), d26: fieldValue("d26", point.lat, point.lon), nearestArgoKm: nearestArgo(point) });
+    
+    const depths = DEPTHS.map((depth, i) => {
+      const temp = fieldValue("temperature", point.lat, point.lon, depth);
+      const sal = fieldValue("salinity", point.lat, point.lon, depth);
+      const unc = fieldValue("uncertainty", point.lat, point.lon, depth);
+      
+      const argoTemp = temp + Math.sin(i * 1.8 + point.lat) * 0.33;
+      const argoSal = sal + Math.cos(i * 2.1 + point.lon) * 0.15;
+      
+      const armorTemp = temp + Math.cos(i + point.lon) * 0.5;
+      const armorSal = sal + Math.sin(i * 1.1 + point.lat) * 0.2;
+      
+      return {
+        depth,
+        oceanEmbed: { temperature: temp, salinity: sal, uncertainty: unc },
+        armor3d: { temperature: armorTemp, salinity: armorSal },
+        argo: { temperature: argoTemp, salinity: argoSal }
+      };
+    });
+
+    return wait<OceanProfile>({ 
+      location: point, 
+      week: "2026-W35",
+      depths, 
+      tchp: fieldValue("tchp", point.lat, point.lon), 
+      d26: fieldValue("d26", point.lat, point.lon), 
+      confidence: fieldValue("uncertainty", point.lat, point.lon, 0),
+      nearestArgoKm: nearestArgo(point),
+      gateStatus: "PUBLISHED"
+    });
   },
 };
