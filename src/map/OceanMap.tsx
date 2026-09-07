@@ -55,7 +55,7 @@ function fillColors(field: FieldId): maplibregl.ExpressionSpecification {
 }
 
 const toCollection = (points: FieldPoint[]): FeatureCollection => {
-  const d = 0.3; // Half-width of the 0.6 degree mock grid
+  const d = 0.125; // Half-width of the 0.25 degree grid
   return { 
     type: "FeatureCollection", 
     features: points.map((p) => ({ 

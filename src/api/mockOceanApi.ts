@@ -61,8 +61,8 @@ export const mockOceanApi: OceanEmbedApi = {
   getArgoFloats: () => wait(floats),
   getField: (field, depth) => {
     const rows: FieldPoint[] = [];
-    for (let lat = domain.minLat + 0.5; lat < domain.maxLat; lat += 0.6) {
-      for (let lon = domain.minLon + 0.5; lon < domain.maxLon; lon += 0.6) {
+    for (let lat = domain.minLat; lat <= domain.maxLat; lat += 0.25) {
+      for (let lon = domain.minLon; lon <= domain.maxLon; lon += 0.25) {
         if (!isLand(lat, lon)) {
           rows.push({ lat, lon, value: fieldValue(field, lat, lon, depth), uncertainty: fieldValue("uncertainty", lat, lon, depth) });
         }
