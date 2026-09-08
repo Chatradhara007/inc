@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { OceanProfile } from '../../api/types';
 import { ProfileOverview } from './ProfileOverview';
 import { DepthReport } from './DepthReport';
@@ -15,6 +15,10 @@ interface ProfilePanelProps {
 
 export function ProfilePanel({ field, panelData, profile, isOceanMissing }: ProfilePanelProps) {
   const [selectedDepth, setSelectedDepth] = useState<number | null>(null);
+
+  useEffect(() => {
+    setSelectedDepth(null);
+  }, [profile?.location?.lat, profile?.location?.lon, field]);
 
   if (isOceanMissing) {
     return (
