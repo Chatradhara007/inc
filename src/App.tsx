@@ -154,7 +154,11 @@ export function App() {
         
         <div className="rail-section-label">Reconstructed fields</div>
         {fieldDefinitions.map((item) => (
-          <div key={item.id} className={`layer-btn ${field === item.id ? "active" : ""}`} onClick={() => setField(item.id)} data-name={item.label}>
+          <div key={item.id} className={`layer-btn ${field === item.id ? "active" : ""}`} onClick={() => {
+            setField(item.id);
+            setProfile(undefined);
+            setPanelData(undefined);
+          }} data-name={item.label}>
             <span className="swatch" style={{ background: item.color }}></span>
             <span className="lbl">{item.label}</span>
             <span className="num">{item.short}</span>

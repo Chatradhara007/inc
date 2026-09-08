@@ -80,38 +80,6 @@ export function ProfilePanel({ field, panelData, profile, isOceanMissing }: Prof
         )}
       </div>
 
-      {/* Fixed Context Metrics at the Bottom */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '16px', marginTop: '16px' }}>
-        <div style={{ fontSize: '11px', fontWeight: 600, color: '#a0b0b8', letterSpacing: '0.05em', marginBottom: '12px' }}>
-          CONTEXT
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-          <div className="pp-stat" style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px' }}>
-            <div className="k" style={{ fontSize: '10px', color: '#6d7b82' }}>TCHP</div>
-            <div className="v" style={{ fontSize: '13px', color: '#fff', marginTop: '2px' }}>
-              {profile.tchp ? profile.tchp.toFixed(0) : '—'}<small style={{ color: '#6d7b82', fontSize: '10px' }}> kJ cm⁻²</small>
-            </div>
-          </div>
-          <div className="pp-stat" style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px' }}>
-            <div className="k" style={{ fontSize: '10px', color: '#6d7b82' }}>D26</div>
-            <div className="v" style={{ fontSize: '13px', color: '#fff', marginTop: '2px' }}>
-              {profile.d26 ? profile.d26.toFixed(0) : '—'}<small style={{ color: '#6d7b82', fontSize: '10px' }}> m</small>
-            </div>
-          </div>
-          <div className="pp-stat" style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px' }}>
-            <div className="k" style={{ fontSize: '10px', color: '#6d7b82' }}>CONFIDENCE</div>
-            <div className="v" style={{ fontSize: '13px', color: '#fff', marginTop: '2px' }}>
-              {profile.confidence ? `±${profile.confidence.toFixed(2)}` : '—'}<small style={{ color: '#6d7b82', fontSize: '10px' }}> °C</small>
-            </div>
-          </div>
-          <div className="pp-stat" style={{ background: 'rgba(255,255,255,0.02)', padding: '8px', borderRadius: '6px' }}>
-            <div className="k" style={{ fontSize: '10px', color: '#6d7b82' }}>GATE</div>
-            <div className="v" style={{ fontSize: '13px', color: '#fff', marginTop: '2px' }}>
-              {profile.gateStatus || '—'}
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
