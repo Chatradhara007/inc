@@ -46,19 +46,20 @@ export function App() {
   const [profile, setProfile] = useState<OceanProfile | null | undefined>();
   const [panelData, setPanelData] = useState<any>();
   const [status, setStatus] = useState<RunStatus>();
+  const [selectedAnalysisDate, setSelectedAnalysisDate] = useState("2026-08-25");
   
   const selectedField = useMemo(() => fieldDefinitions.find((item) => item.id === field)!, [field]);
   const depth = DEPTHS[depthIndex];
 
   useEffect(() => {
-    mockOceanApi.getStatus('2025-01-01').then(setStatus);
-    mockOceanApi.getArgoFloats('2025-01-01').then(setFloats);
+    mockOceanApi.getStatus(selectedAnalysisDate).then(setStatus);
+    mockOceanApi.getArgoFloats(selectedAnalysisDate).then(setFloats);
     geoService.loadMask();
-  }, []);
+  }, [selectedAnalysisDate]);
   
   useEffect(() => { 
-    void mockOceanApi.getField('2025-01-01', field, selectedField.depth ? depth : 0).then(setPoints); 
-  }, [field, depth, selectedField.depth]);
+    void mockOceanApi.getField(selectedAnalysisDate, field, selectedField.depth ? depth : 0).then(setPoints); 
+  }, [selectedAnalysisDate, field, depth, selectedField.depth]);
   
   useEffect(() => { 
     if (selected) {
@@ -68,30 +69,30 @@ export function App() {
       } else {
         if (field === 'temperature' || field === 'salinity') {
           setPanelData(undefined);
-          void mockOceanApi.getProfile('2025-01-01', selected).then(setProfile);
+          void mockOceanApi.getProfile(selectedAnalysisDate, selected).then(setProfile);
         } else if (field === 'tchp') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getTchp('2025-01-01', selected).then(setPanelData);
+          void mockOceanApi.getTchp(selectedAnalysisDate, selected).then(setPanelData);
         } else if (field === 'mld') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getMld('2025-01-01', selected).then(setPanelData);
+          void mockOceanApi.getMld(selectedAnalysisDate, selected).then(setPanelData);
         } else if (field === 'd26') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getD26('2025-01-01', selected).then(setPanelData);
+          void mockOceanApi.getD26(selectedAnalysisDate, selected).then(setPanelData);
         } else if (field === 'uncertainty') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getUncertainty('2025-01-01', selected, depth).then(setPanelData);
+          void mockOceanApi.getUncertainty(selectedAnalysisDate, selected, depth).then(setPanelData);
         }
       }
     } else {
       setProfile(undefined);
       setPanelData(undefined);
     }
-  }, [selected, field, depth]);
+  }, [selected, selectedAnalysisDate, field, depth]);
 
   const chooseLocation = useCallback((location: Coordinate) => setSelected(location), []);
 
@@ -106,14 +107,27 @@ export function App() {
       <div className="topbar">
         <div className="brand"><span className="dot"></span>OCEANEMBED <small>&nbsp;CBAM-CNN · v1.0</small></div>
         
-        <div className="status" style={{ marginLeft: '20px' }}>
-          <span>Analysis week <b>{status?.analysisWeek ?? "Loading…"}</b></span>
-          <span style={{ marginLeft: '10px' }}>{status?.sourceWindow ?? ""}</span>
+        <div className="date-selector-wrap" style={{ display: 'flex', alignItems: 'center', marginLeft: '30px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '6px' }}>
+          <span style={{ fontSize: '11px', color: '#a0b0b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '10px' }}>Analysis Date</span>
+          <input 
+            type="date" 
+            min="2020-01-01" 
+            max="2026-12-31" 
+            value={selectedAnalysisDate}
+            onChange={(e) => setSelectedAnalysisDate(e.target.value)}
+            style={{ 
+              background: 'transparent', 
+              color: '#fff', 
+              border: 'none',
+              fontFamily: 'var(--mono)',
+              fontSize: '14px',
+              outline: 'none',
+              cursor: 'pointer'
+            }}
+          />
         </div>
 
-        <div className="scrubber-wrap" style={{ visibility: 'hidden', flex: 1 }}>
-           {/* Placeholder to keep layout balanced */}
-        </div>
+        <div style={{ flex: 1 }}></div>
 
         <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           <div className="basemap-toggle">
@@ -235,17 +249,6 @@ export function App() {
         </div>
       </div>
 
-      <div className="stats-strip">
-        <div className="item">RMSE <b>0.42°C</b></div>
-        <div className="sep"></div>
-        <div className="item">R² <b>0.94</b></div>
-        <div className="sep"></div>
-        <div className="item">vs ARMOR3D <b>−18% error</b></div>
-        <div className="sep"></div>
-        <div className="item warn">Virtual floats <b>≈ +14</b></div>
-        <div className="sep"></div>
-        <div className="item">Domain <b>5°N–30°N, 45°E–105°E</b></div>
-      </div>
     </div>
   );
 }
