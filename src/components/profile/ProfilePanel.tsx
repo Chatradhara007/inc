@@ -11,14 +11,34 @@ interface ProfilePanelProps {
   panelData?: any;
   profile: OceanProfile | null;
   isOceanMissing: boolean;
+  apiError?: string | null;
 }
 
-export function ProfilePanel({ field, panelData, profile, isOceanMissing }: ProfilePanelProps) {
+export function ProfilePanel({ field, panelData, profile, isOceanMissing, apiError }: ProfilePanelProps) {
   const [selectedDepth, setSelectedDepth] = useState<number | null>(null);
 
   useEffect(() => {
     setSelectedDepth(null);
   }, [profile?.location?.lat, profile?.location?.lon, field]);
+
+  if (apiError) {
+    return (
+      <div className="land-warning-card" style={{
+        padding: "36px 20px",
+        textAlign: "center",
+        background: "rgba(255, 90, 90, 0.06)",
+        border: "1px dashed rgba(255, 90, 90, 0.4)",
+        borderRadius: "10px",
+        margin: "10px 0"
+      }}>
+        <div style={{ fontSize: "28px", marginBottom: "8px" }}>⚠️</div>
+        <b style={{ fontSize: "14px", color: "#ff5a5a", letterSpacing: "0.05em" }}>API ERROR</b>
+        <p style={{ fontSize: "12px", marginTop: "10px", color: "#a0b0b8", lineHeight: "1.5" }}>
+          {apiError}
+        </p>
+      </div>
+    );
+  }
 
   if (isOceanMissing) {
     return (

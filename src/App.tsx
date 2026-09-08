@@ -45,6 +45,7 @@ export function App() {
   const [floats, setFloats] = useState<ArgoFloat[]>([]);
   const [profile, setProfile] = useState<OceanProfile | null | undefined>();
   const [panelData, setPanelData] = useState<any>();
+  const [apiError, setApiError] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>();
   const [selectedAnalysisDate, setSelectedAnalysisDate] = useState("2026-08-25");
   
@@ -52,46 +53,76 @@ export function App() {
   const depth = DEPTHS[depthIndex];
 
   useEffect(() => {
-    mockOceanApi.getStatus(selectedAnalysisDate).then(setStatus);
-    mockOceanApi.getArgoFloats(selectedAnalysisDate).then(setFloats);
+    setApiError(null);
+    const controller = new AbortController();
+    mockOceanApi.getStatus(selectedAnalysisDate).then(data => { if (!controller.signal.aborted) setStatus(data); }).catch(e => { if (!controller.signal.aborted) console.error(e); });
+    mockOceanApi.getArgoFloats(selectedAnalysisDate).then(data => { if (!controller.signal.aborted) setFloats(data); }).catch(e => { if (!controller.signal.aborted) console.error(e); });
     geoService.loadMask();
+    return () => controller.abort();
   }, [selectedAnalysisDate]);
   
   useEffect(() => { 
-    void mockOceanApi.getField(selectedAnalysisDate, field, selectedField.depth ? depth : 0).then(setPoints); 
+    const controller = new AbortController();
+    void mockOceanApi.getField(selectedAnalysisDate, field, selectedField.depth ? depth : 0).then(data => {
+      if (!controller.signal.aborted) setPoints(data);
+    }).catch(err => {
+      if (!controller.signal.aborted) console.error("Failed to load map field", err);
+    }); 
+    return () => controller.abort();
   }, [selectedAnalysisDate, field, depth, selectedField.depth]);
   
   useEffect(() => { 
+    const controller = new AbortController();
+    setApiError(null);
+    
     if (selected) {
       if (geoService.isLand(selected.lat, selected.lon)) {
         setProfile(undefined);
         setPanelData(undefined);
       } else {
+        const handleSuccess = (setData: (v: any) => void) => (data: any) => {
+          if (!controller.signal.aborted) setData(data);
+        };
+        const handleError = (err: any) => {
+          if (!controller.signal.aborted) {
+            setApiError(err.message || "Failed to load profile data");
+            setProfile(null);
+            setPanelData(null);
+          }
+        };
+
         if (field === 'temperature' || field === 'salinity') {
           setPanelData(undefined);
-          void mockOceanApi.getProfile(selectedAnalysisDate, selected).then(setProfile);
+          void mockOceanApi.getProfile(selectedAnalysisDate, selected)
+            .then(handleSuccess(setProfile)).catch(handleError);
         } else if (field === 'tchp') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getTchp(selectedAnalysisDate, selected).then(setPanelData);
+          void mockOceanApi.getTchp(selectedAnalysisDate, selected)
+            .then(handleSuccess(setPanelData)).catch(handleError);
         } else if (field === 'mld') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getMld(selectedAnalysisDate, selected).then(setPanelData);
+          void mockOceanApi.getMld(selectedAnalysisDate, selected)
+            .then(handleSuccess(setPanelData)).catch(handleError);
         } else if (field === 'd26') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getD26(selectedAnalysisDate, selected).then(setPanelData);
+          void mockOceanApi.getD26(selectedAnalysisDate, selected)
+            .then(handleSuccess(setPanelData)).catch(handleError);
         } else if (field === 'uncertainty') {
           setPanelData(undefined);
           setProfile(undefined);
-          void mockOceanApi.getUncertainty(selectedAnalysisDate, selected, depth).then(setPanelData);
+          void mockOceanApi.getUncertainty(selectedAnalysisDate, selected, depth)
+            .then(handleSuccess(setPanelData)).catch(handleError);
         }
       }
     } else {
       setProfile(undefined);
       setPanelData(undefined);
     }
+    
+    return () => controller.abort();
   }, [selected, selectedAnalysisDate, field, depth]);
 
   const chooseLocation = useCallback((location: Coordinate) => setSelected(location), []);
@@ -248,7 +279,7 @@ export function App() {
               </p>
             </div>
           ) : (
-            <ProfilePanel field={field} profile={profile ?? null} panelData={panelData ?? null} isOceanMissing={profile === null && panelData === null} />
+            <ProfilePanel field={field} profile={profile ?? null} panelData={panelData ?? null} isOceanMissing={profile === null && panelData === null} apiError={apiError} />
           )}
         </div>
       </div>
