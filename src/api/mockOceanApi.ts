@@ -4,23 +4,66 @@ const domain = { minLat: 5, maxLat: 30, minLon: 45, maxLon: 105 };
 const clamp = (n: number, low: number, high: number) => Math.max(low, Math.min(high, n));
 const wait = <T,>(value: T) => new Promise<T>((resolve) => window.setTimeout(() => resolve(value), 130));
 
-function fieldValue(field: FieldId, lat: number, lon: number, depth = 0) {
-  const eddy = Math.sin((lon - 57) / 5) * Math.cos((lat - 14) / 4);
-  const thermocline = Math.exp(-Math.pow((depth - 110) / 100, 2));
-  if (field === "temperature") return clamp(29.2 - depth * 0.011 + eddy * 1.3 - thermocline * 2.4, 3, 31);
-  if (field === "salinity") return clamp(34.3 + eddy * 0.45 + depth * 0.0009, 31, 37);
-  if (field === "uncertainty") return clamp(0.18 + Math.abs(eddy) * 0.38 + thermocline * 0.24, 0.1, 1.2);
-  if (field === "tchp") return clamp(62 + eddy * 22 + Math.cos(lat / 4) * 12, 10, 130);
-  if (field === "d26") return clamp(72 + eddy * 28 + Math.sin(lat / 4) * 14, 10, 160);
-  return clamp(33 + eddy * 15 + Math.cos(lon / 8) * 9, 8, 110);
+function getDateFactors(dateStr: string) {
+  const d = new Date(dateStr || "2026-08-25");
+  const year = d.getFullYear() || 2026;
+  const dayOfYear = Math.floor((d.getTime() - new Date(year, 0, 0).getTime()) / 86400000) || 237;
+  
+  // Seasonal heating/cooling cycle (peak surface temp in May-June, cooler in Jan-Feb)
+  const annualPhase = ((dayOfYear - 140) / 365.25) * Math.PI * 2;
+  const seasonalTemp = Math.cos(annualPhase) * 2.4; 
+  const seasonalSal = Math.sin(annualPhase) * 0.7; 
+  
+  // Westward planetary Rossby wave & mesoscale eddy migration across the Indian Ocean
+  const eddyDrift = (dayOfYear * 0.09);
+  
+  return { seasonalTemp, seasonalSal, eddyDrift, dayOfYear, year };
 }
 
-const floats: ArgoFloat[] = [
+export function getWeekNumber(dateStr: string) {
+  const d = new Date(dateStr || "2026-08-25");
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+}
+
+function fieldValue(field: FieldId, lat: number, lon: number, depth = 0, date = "2026-08-25") {
+  const { seasonalTemp, seasonalSal, eddyDrift } = getDateFactors(date);
+
+  // Dynamic westward propagating eddies
+  const eddy1 = Math.sin((lon - 57 - eddyDrift) / 4.5) * Math.cos((lat - 14) / 3.8);
+  const eddy2 = Math.cos((lon - 84 - eddyDrift * 0.7) / 5) * Math.sin((lat - 12) / 4);
+  const eddy = eddy1 + eddy2 * 0.75;
+
+  // Surface seasonal attenuation with depth (deep ocean 800-1000m has minimal seasonal change)
+  const depthAtten = Math.exp(-depth / 75);
+  const thermocline = Math.exp(-Math.pow((depth - (105 + eddy * 22)) / 95, 2));
+
+  if (field === "temperature") {
+    return clamp(28.6 + seasonalTemp * depthAtten - depth * 0.012 + eddy * 1.5 - thermocline * 2.5, 3, 32);
+  }
+  if (field === "salinity") {
+    return clamp(34.3 + seasonalSal * depthAtten + eddy * 0.5 + depth * 0.0009, 31, 37.5);
+  }
+  if (field === "uncertainty") {
+    return clamp(0.18 + Math.abs(eddy) * 0.35 + thermocline * 0.22, 0.1, 1.2);
+  }
+  if (field === "tchp") {
+    return clamp(62 + seasonalTemp * 6 + eddy * 24 + Math.cos(lat / 4) * 12, 10, 135);
+  }
+  if (field === "d26") {
+    return clamp(72 + seasonalTemp * 7 + eddy * 26 + Math.sin(lat / 4) * 14, 10, 160);
+  }
+  return clamp(35 - seasonalTemp * 6 + eddy * 14 + Math.cos(lon / 8) * 8, 10, 110);
+}
+
+const baseFloats: ArgoFloat[] = [
   [11.25, 70.75], [15.75, 84.25], [18.5, 89.5], [21.25, 93.75], [9.75, 59.5], [13.25, 77.5], [23.5, 64.25], [17.75, 100.25],
 ].map(([lat, lon], index) => ({ lat, lon, id: `WMO ${2900 + index}`, lastProfile: "2026-W35" }));
 
-function nearestArgo(location: Coordinate) {
-  return Math.min(...floats.map((f) => Math.hypot(f.lat - location.lat, (f.lon - location.lon) * 0.96) * 111));
+function nearestArgo(location: Coordinate, floatsList: ArgoFloat[]) {
+  return Math.min(...floatsList.map((f) => Math.hypot(f.lat - location.lat, (f.lon - location.lon) * 0.96) * 111));
 }
 
 export function isLand(lat: number, lon: number): boolean {
@@ -43,26 +86,52 @@ const LATS = [5.0, 5.25, 5.5, 5.75, 6.0, 6.25, 6.5, 6.75, 7.0, 7.25, 7.5, 7.75, 
 const LONS = [45.0, 45.25, 45.5, 45.75, 46.0, 46.25, 46.5, 46.75, 47.0, 47.25, 47.5, 47.75, 48.0, 48.25, 48.5, 48.75, 49.0, 49.25, 49.5, 49.75, 50.0, 50.25, 50.5, 50.75, 51.0, 51.25, 51.5, 51.75, 52.0, 52.25, 52.5, 52.75, 53.0, 53.25, 53.5, 53.75, 54.0, 54.25, 54.5, 54.75, 55.0, 55.25, 55.5, 55.75, 56.0, 56.25, 56.5, 56.75, 57.0, 57.25, 57.5, 57.75, 58.0, 58.25, 58.5, 58.75, 59.0, 59.25, 59.5, 59.75, 60.0, 60.25, 60.5, 60.75, 61.0, 61.25, 61.5, 61.75, 62.0, 62.25, 62.5, 62.75, 63.0, 63.25, 63.5, 63.75, 64.0, 64.25, 64.5, 64.75, 65.0, 65.25, 65.5, 65.75, 66.0, 66.25, 66.5, 66.75, 67.0, 67.25, 67.5, 67.75, 68.0, 68.25, 68.5, 68.75, 69.0, 69.25, 69.5, 69.75, 70.0, 70.25, 70.5, 70.75, 71.0, 71.25, 71.5, 71.75, 72.0, 72.25, 72.5, 72.75, 73.0, 73.25, 73.5, 73.75, 74.0, 74.25, 74.5, 74.75, 75.0, 75.25, 75.5, 75.75, 76.0, 76.25, 76.5, 76.75, 77.0, 77.25, 77.5, 77.75, 78.0, 78.25, 78.5, 78.75, 79.0, 79.25, 79.5, 79.75, 80.0, 80.25, 80.5, 80.75, 81.0, 81.25, 81.5, 81.75, 82.0, 82.25, 82.5, 82.75, 83.0, 83.25, 83.5, 83.75, 84.0, 84.25, 84.5, 84.75, 85.0, 85.25, 85.5, 85.75, 86.0, 86.25, 86.5, 86.75, 87.0, 87.25, 87.5, 87.75, 88.0, 88.25, 88.5, 88.75, 89.0, 89.25, 89.5, 89.75, 90.0, 90.25, 90.5, 90.75, 91.0, 91.25, 91.5, 91.75, 92.0, 92.25, 92.5, 92.75, 93.0, 93.25, 93.5, 93.75, 94.0, 94.25, 94.5, 94.75, 95.0, 95.25, 95.5, 95.75, 96.0, 96.25, 96.5, 96.75, 97.0, 97.25, 97.5, 97.75, 98.0, 98.25, 98.5, 98.75, 99.0, 99.25, 99.5, 99.75, 100.0, 100.25, 100.5, 100.75, 101.0, 101.25, 101.5, 101.75, 102.0, 102.25, 102.5, 102.75, 103.0, 103.25, 103.5, 103.75, 104.0, 104.25, 104.5, 104.75, 105.0];
 
 export const mockOceanApi: OceanEmbedApi = {
-  getStatus: (date) => wait<RunStatus>({
-    analysisWeek: "2026-W35", modelVersion: "oceanembed-v1.0.0", gateStatus: "published",
-    sourceWindow: "27 Aug – 02 Sep 2026", lastUpdated: "03 Sep 2026 · 06:18 UTC",
-  }),
-  getArgoFloats: (date) => wait(floats),
+  getStatus: (date) => {
+    const week = getWeekNumber(date);
+    return wait<RunStatus>({
+      analysisWeek: week,
+      modelVersion: "oceanembed-v1.0.0",
+      gateStatus: "published",
+      sourceWindow: `${week} Reanalysis Window`,
+      lastUpdated: `${date} · 06:00 UTC`,
+    });
+  },
+  getArgoFloats: (date) => {
+    const { eddyDrift } = getDateFactors(date);
+    const week = getWeekNumber(date);
+    const updatedFloats = baseFloats.map((f, i) => {
+      const dLat = Math.sin(eddyDrift * 0.4 + i) * 0.5;
+      const dLon = Math.cos(eddyDrift * 0.35 + i * 1.5) * 0.6;
+      return {
+        ...f,
+        lat: clamp(f.lat + dLat, 6, 26),
+        lon: clamp(f.lon + dLon, 52, 96),
+        lastProfile: week
+      };
+    });
+    return wait(updatedFloats);
+  },
   getField: (date, field, depth) => {
     const rows: FieldPoint[] = [];
     for (const lat of LATS) {
       for (const lon of LONS) {
-        rows.push({ lat, lon, value: fieldValue(field, lat, lon, depth), uncertainty: fieldValue("uncertainty", lat, lon, depth) });
+        rows.push({
+          lat,
+          lon,
+          value: fieldValue(field, lat, lon, depth, date),
+          uncertainty: fieldValue("uncertainty", lat, lon, depth, date)
+        });
       }
     }
     return wait(rows);
   },
   getProfile: (date, location, variable) => {
+    const week = getWeekNumber(date);
     const point = { lat: clamp(location.lat, domain.minLat, domain.maxLat), lon: clamp(location.lon, domain.minLon, domain.maxLon) };
     const depths = DEPTHS.map((depth, i) => {
-      const temp = fieldValue("temperature", point.lat, point.lon, depth);
-      const sal = fieldValue("salinity", point.lat, point.lon, depth);
-      const unc = fieldValue("uncertainty", point.lat, point.lon, depth);
+      const temp = fieldValue("temperature", point.lat, point.lon, depth, date);
+      const sal = fieldValue("salinity", point.lat, point.lon, depth, date);
+      const unc = fieldValue("uncertainty", point.lat, point.lon, depth, date);
       
       const argoTemp = temp + Math.sin(i * 1.8 + point.lat) * 0.33;
       const argoSal = sal + Math.cos(i * 2.1 + point.lon) * 0.15;
@@ -77,46 +146,50 @@ export const mockOceanApi: OceanEmbedApi = {
       };
     });
     return wait<OceanProfile>({ 
-      location: point, week: "2026-W35", depths, 
-      tchp: fieldValue("tchp", point.lat, point.lon), 
-      d26: fieldValue("d26", point.lat, point.lon), 
-      mld: fieldValue("mld", point.lat, point.lon),
-      confidence: fieldValue("uncertainty", point.lat, point.lon, 0),
-      nearestArgoKm: nearestArgo(point), gateStatus: "PUBLISHED"
+      location: point, week, depths, 
+      tchp: fieldValue("tchp", point.lat, point.lon, 0, date), 
+      d26: fieldValue("d26", point.lat, point.lon, 0, date), 
+      mld: fieldValue("mld", point.lat, point.lon, 0, date),
+      confidence: fieldValue("uncertainty", point.lat, point.lon, 0, date),
+      nearestArgoKm: nearestArgo(point, baseFloats), gateStatus: "PUBLISHED"
     });
   },
   getTchp: (date, location) => {
-    const value = fieldValue("tchp", location.lat, location.lon);
+    const week = getWeekNumber(date);
+    const value = fieldValue("tchp", location.lat, location.lon, 0, date);
     let category = "Too Low";
     if (value >= 40 && value < 60) category = "Medium (Baseline)";
     else if (value >= 60 && value < 90) category = "High (Good)";
     else if (value >= 90) category = "Too High (Extreme Energy)";
     
     return wait({
-      value, category, d26: fieldValue("d26", location.lat, location.lon),
-      confidence: fieldValue("uncertainty", location.lat, location.lon, 0),
-      week: "2026-W35", location
+      value, category, d26: fieldValue("d26", location.lat, location.lon, 0, date),
+      confidence: fieldValue("uncertainty", location.lat, location.lon, 0, date),
+      week, location
     });
   },
   getD26: (date, location) => {
+    const week = getWeekNumber(date);
     return wait({
-      value: fieldValue("d26", location.lat, location.lon),
-      tchp: fieldValue("tchp", location.lat, location.lon),
-      confidence: fieldValue("uncertainty", location.lat, location.lon, 0),
-      week: "2026-W35", location
+      value: fieldValue("d26", location.lat, location.lon, 0, date),
+      tchp: fieldValue("tchp", location.lat, location.lon, 0, date),
+      confidence: fieldValue("uncertainty", location.lat, location.lon, 0, date),
+      week, location
     });
   },
   getMld: (date, location) => {
+    const week = getWeekNumber(date);
     return wait({
-      value: fieldValue("mld", location.lat, location.lon),
-      confidence: fieldValue("uncertainty", location.lat, location.lon, 0),
-      week: "2026-W35", location
+      value: fieldValue("mld", location.lat, location.lon, 0, date),
+      confidence: fieldValue("uncertainty", location.lat, location.lon, 0, date),
+      week, location
     });
   },
   getUncertainty: (date, location, depth) => {
+    const week = getWeekNumber(date);
     return wait({
-      value: fieldValue("uncertainty", location.lat, location.lon, depth ?? 0),
-      week: "2026-W35", location, depth
+      value: fieldValue("uncertainty", location.lat, location.lon, depth ?? 0, date),
+      week, location, depth
     });
   }
 };

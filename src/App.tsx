@@ -47,6 +47,23 @@ export function App() {
   const [apiError, setApiError] = useState<string | null>(null);
   const [status, setStatus] = useState<RunStatus>();
   const [selectedAnalysisDate, setSelectedAnalysisDate] = useState("2026-08-25");
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const stepDate = useCallback((days: number) => {
+    setSelectedAnalysisDate(prev => {
+      const d = new Date(prev || "2026-08-25");
+      d.setDate(d.getDate() + days);
+      return d.toISOString().split("T")[0];
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isPlaying) return;
+    const timer = window.setInterval(() => {
+      stepDate(1);
+    }, 450);
+    return () => clearInterval(timer);
+  }, [isPlaying, stepDate]);
   
   const selectedField = useMemo(() => fieldDefinitions.find((item) => item.id === field)!, [field]);
   const depth = DEPTHS[depthIndex];
@@ -144,6 +161,12 @@ export function App() {
         </div>
         
         <div className="date-selector-pill">
+          <button className="timeline-step-btn" title="Previous Day (Step Back)" onClick={() => stepDate(-1)}>
+            ◀
+          </button>
+          <button className={`timeline-play-btn ${isPlaying ? "playing" : ""}`} title={isPlaying ? "Pause Timeline" : "Animate Timeline Live"} onClick={() => setIsPlaying(!isPlaying)}>
+            {isPlaying ? "❚❚" : "▶"}
+          </button>
           <div className="date-pill-label">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#52e0c4" strokeWidth="2">
               <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
@@ -161,6 +184,9 @@ export function App() {
             onChange={(e) => setSelectedAnalysisDate(e.target.value)}
             className="date-input"
           />
+          <button className="timeline-step-btn" title="Next Day (Step Forward)" onClick={() => stepDate(1)}>
+            ▶
+          </button>
         </div>
 
         <div style={{ flex: 1 }}></div>

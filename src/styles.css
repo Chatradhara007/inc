@@ -78,11 +78,26 @@ html, body {
 .date-selector-pill {
   display: flex; align-items: center; gap: 8px;
   background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.09);
-  padding: 5px 10px; border-radius: 6px; transition: border-color 0.15s, background 0.15s;
+  padding: 4px 8px; border-radius: 6px; transition: border-color 0.15s, background 0.15s;
 }
 .date-selector-pill:hover {
   background: rgba(255, 255, 255, 0.07);
   border-color: rgba(82, 224, 196, 0.35);
+}
+.timeline-step-btn {
+  background: transparent; border: none; color: #7c94a0; font-size: 10px; cursor: pointer;
+  padding: 3px 5px; border-radius: 4px; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+}
+.timeline-step-btn:hover { color: #52e0c4; background: rgba(82, 224, 196, 0.12); }
+.timeline-play-btn {
+  background: rgba(82, 224, 196, 0.1); border: 1px solid rgba(82, 224, 196, 0.25);
+  color: #52e0c4; font-size: 9px; cursor: pointer; padding: 3px 6px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+}
+.timeline-play-btn:hover { background: rgba(82, 224, 196, 0.22); color: #fff; }
+.timeline-play-btn.playing {
+  background: #52e0c4; color: #06131c; font-weight: 700;
+  box-shadow: 0 0 8px rgba(82, 224, 196, 0.6);
 }
 .date-pill-label {
   display: flex; align-items: center; gap: 5px;
