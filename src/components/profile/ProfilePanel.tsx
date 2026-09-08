@@ -59,20 +59,12 @@ export function ProfilePanel({ field, panelData, profile, isOceanMissing, apiErr
     );
   }
 
-  if (!profile && !panelData) {
-    return <div className="empty-profile">Click a water cell to cast a virtual profile.</div>;
-  }
-
   if (field === 'tchp') {
     return panelData ? <TchpReport date="2025-01-01" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading TCHP...</div>;
   }
 
   if (field === 'mld') {
     return panelData ? <ScalarReport title="Mixed Layer Depth" unit="m" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading MLD...</div>;
-  }
-
-  if (field === 'd26') {
-    return panelData ? <ScalarReport title="Depth of 26°C Isotherm" unit="m" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading D26...</div>;
   }
 
   if (field === 'uncertainty') {

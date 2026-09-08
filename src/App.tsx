@@ -10,7 +10,6 @@ const fieldDefinitions: { id: FieldId; label: string; unit: string; depth: boole
   { id: "salinity", label: "Salinity", unit: "psu", depth: true, color: "#7ab8ff", short: "OSSS" },
   { id: "uncertainty", label: "Uncertainty", unit: "σ °C", depth: true, color: "#b9c6cc", short: "σ" },
   { id: "tchp", label: "Cyclone heat", unit: "kJ cm⁻²", depth: false, color: "#ff5a5a", short: "TCHP" },
-  { id: "d26", label: "D26", unit: "m", depth: false, color: "#83c8dd", short: "D26" },
   { id: "mld", label: "Mixed-layer depth", unit: "m", depth: false, color: "#b29bf2", short: "MLD" },
 ];
 
@@ -105,11 +104,6 @@ export function App() {
           setProfile(undefined);
           void mockOceanApi.getMld(selectedAnalysisDate, selected)
             .then(handleSuccess(setPanelData)).catch(handleError);
-        } else if (field === 'd26') {
-          setPanelData(undefined);
-          setProfile(undefined);
-          void mockOceanApi.getD26(selectedAnalysisDate, selected)
-            .then(handleSuccess(setPanelData)).catch(handleError);
         } else if (field === 'uncertainty') {
           setPanelData(undefined);
           setProfile(undefined);
@@ -136,41 +130,64 @@ export function App() {
       <div className="flagline"></div>
 
       <div className="topbar">
-        <div className="brand"><span className="dot"></span>OCEANEMBED <small>&nbsp;CBAM-CNN · v1.0</small></div>
+        <div className="brand">
+          <div className="brand-badge-icon">
+            <span className="dot"></span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#52e0c4" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M2 12h3l3-7 4 14 3-7h7" />
+            </svg>
+          </div>
+          <div className="brand-titles">
+            <span className="brand-name">OCEANEMBED</span>
+            <span className="brand-model-pill">CBAM-CNN · v1.0</span>
+          </div>
+        </div>
         
-        <div className="date-selector-wrap" style={{ display: 'flex', alignItems: 'center', marginLeft: '30px', background: 'rgba(255,255,255,0.05)', padding: '6px 12px', borderRadius: '6px' }}>
-          <span style={{ fontSize: '11px', color: '#a0b0b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginRight: '10px' }}>Analysis Date</span>
+        <div className="date-selector-pill">
+          <div className="date-pill-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#52e0c4" strokeWidth="2">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
+            <span>DATE</span>
+          </div>
           <input 
             type="date" 
             min="2020-01-01" 
             max="2026-12-31" 
             value={selectedAnalysisDate}
             onChange={(e) => setSelectedAnalysisDate(e.target.value)}
-            style={{ 
-              background: 'transparent', 
-              color: '#fff', 
-              border: 'none',
-              fontFamily: 'var(--mono)',
-              fontSize: '14px',
-              outline: 'none',
-              cursor: 'pointer'
-            }}
+            className="date-input"
           />
         </div>
 
         <div style={{ flex: 1 }}></div>
 
-        <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          <div className="basemap-toggle">
+        <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+          <div className="basemap-toggle-segmented">
             {(["basic", "satellite"] as BasemapId[]).map((item) => (
-              <button key={item} className={basemap === item ? "selected" : ""} onClick={() => setBasemap(item)}>
-                {item === "basic" ? "Map" : "Satellite"}
+              <button key={item} className={basemap === item ? "active" : ""} onClick={() => setBasemap(item)}>
+                {item === "basic" ? (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                    <span>MAP</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                    <span>SATELLITE</span>
+                  </>
+                )}
               </button>
             ))}
           </div>
-          <div className="status">
+
+          <div className="status-badge">
             <span className={`liveDot ${status?.gateStatus === 'published' ? 'published' : ''}`}></span>
-            {status?.gateStatus === "published" ? "NRT READY" : "LOADING"}
+            <span className="status-main">{status?.gateStatus === "published" ? "NRT READY" : "LOADING"}</span>
+            <span className="status-cycle">{status?.analysisWeek ?? "2026-W35"}</span>
           </div>
         </div>
       </div>
@@ -279,8 +296,34 @@ export function App() {
               </p>
             </div>
           ) : (
-            <ProfilePanel field={field} profile={profile ?? null} panelData={panelData ?? null} isOceanMissing={profile === null && panelData === null} apiError={apiError} />
+            <ProfilePanel 
+              field={field} 
+              profile={profile ?? null} 
+              panelData={panelData ?? null} 
+              isOceanMissing={(field === 'temperature' || field === 'salinity') ? profile === null : panelData === null} 
+              apiError={apiError} 
+            />
           )}
+        </div>
+      </div>
+
+      <div className="bottom-model-bar">
+        <div className="bmb-brand">
+          <div className="bmb-pulse-dot"></div>
+          <span className="bmb-model-name">OCEANEMBED</span>
+          <span className="bmb-chip">CBAM-CNN · v1.0.0</span>
+        </div>
+        <div className="bmb-sep"></div>
+        <div className="bmb-subtitle">
+          Convolutional Block Attention Reanalysis
+        </div>
+        <div className="bmb-sep"></div>
+        <div className="bmb-specs">
+          <span className="bmb-spec-item"><b>GRID:</b> 0.25° × 0.25°</span>
+          <span className="bmb-spec-dot">·</span>
+          <span className="bmb-spec-item"><b>DEPTH:</b> 0–1000m</span>
+          <span className="bmb-spec-dot">·</span>
+          <span className="bmb-spec-item"><b>CYCLE:</b> {status?.analysisWeek ?? "2026-W35"}</span>
         </div>
       </div>
 

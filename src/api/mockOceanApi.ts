@@ -24,33 +24,18 @@ function nearestArgo(location: Coordinate) {
 }
 
 export function isLand(lat: number, lon: number): boolean {
-  // Global domain boundaries for North Indian Ocean water
   if (lat > 30.0 || lat < 5.0 || lon < 45.0 || lon > 105.0) return true;
-
-  // Arabia / Oman / Persian Gulf
   if (lon < 56.0 && lat > 14.0) return true;
-
-  // Myanmar / Indochina
   if (lon > 94.0 && lat > 15.0) return true;
-
-  // India peninsula mainland:
   if (lat >= 8.0 && lat <= 23.5) {
-    // West coast goes from ~72.8 at 20N down to ~77.5 at 8N
     const westCoastLon = 72.8 + (20.0 - lat) * 0.39;
     const eastCoastLon = 77.5 + (lat - 8.0) * 0.75;
-    if (lon >= westCoastLon && lon <= eastCoastLon) {
-      return true;
-    }
+    if (lon >= westCoastLon && lon <= eastCoastLon) return true;
   }
-
-  // Northern India / Pakistan / Ganges Delta
   if (lat > 22.0 && lon > 66.0 && lon < 91.0) return true;
-
-  // Sri Lanka island mask
   const dLat = (lat - 7.8) / 1.1;
   const dLon = (lon - 80.7) / 0.8;
   if (dLat * dLat + dLon * dLon < 1) return true;
-
   return false;
 }
 
@@ -73,9 +58,6 @@ export const mockOceanApi: OceanEmbedApi = {
     return wait(rows);
   },
   getProfile: (date, location, variable) => {
-    if (location.lat > 13.0 && location.lat < 17.0 && location.lon > 63.0 && location.lon < 68.0) {
-      return wait<OceanProfile | null>(null as any);
-    }
     const point = { lat: clamp(location.lat, domain.minLat, domain.maxLat), lon: clamp(location.lon, domain.minLon, domain.maxLon) };
     const depths = DEPTHS.map((depth, i) => {
       const temp = fieldValue("temperature", point.lat, point.lon, depth);
@@ -104,7 +86,6 @@ export const mockOceanApi: OceanEmbedApi = {
     });
   },
   getTchp: (date, location) => {
-    if (location.lat > 13.0 && location.lat < 17.0 && location.lon > 63.0 && location.lon < 68.0) return wait(null);
     const value = fieldValue("tchp", location.lat, location.lon);
     let category = "Too Low";
     if (value >= 40 && value < 60) category = "Medium (Baseline)";
@@ -118,7 +99,6 @@ export const mockOceanApi: OceanEmbedApi = {
     });
   },
   getD26: (date, location) => {
-    if (location.lat > 13.0 && location.lat < 17.0 && location.lon > 63.0 && location.lon < 68.0) return wait(null);
     return wait({
       value: fieldValue("d26", location.lat, location.lon),
       tchp: fieldValue("tchp", location.lat, location.lon),
@@ -127,7 +107,6 @@ export const mockOceanApi: OceanEmbedApi = {
     });
   },
   getMld: (date, location) => {
-    if (location.lat > 13.0 && location.lat < 17.0 && location.lon > 63.0 && location.lon < 68.0) return wait(null);
     return wait({
       value: fieldValue("mld", location.lat, location.lon),
       confidence: fieldValue("uncertainty", location.lat, location.lon, 0),
@@ -135,7 +114,6 @@ export const mockOceanApi: OceanEmbedApi = {
     });
   },
   getUncertainty: (date, location, depth) => {
-    if (location.lat > 13.0 && location.lat < 17.0 && location.lon > 63.0 && location.lon < 68.0) return wait(null);
     return wait({
       value: fieldValue("uncertainty", location.lat, location.lon, depth ?? 0),
       week: "2026-W35", location, depth

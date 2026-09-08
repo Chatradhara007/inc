@@ -97,7 +97,7 @@ export function OceanMap({ basemap, field, points, floats, showGrid, showArgo, s
 
   useEffect(() => {
     if (!node.current || mapRef.current) return;
-    const map = new maplibregl.Map({ container: node.current, style: basemaps[basemap], center: [77, 17.5], zoom: 3.45, maxBounds: [[42, 2], [108, 33]] });
+    const map = new maplibregl.Map({ container: node.current, style: basemaps[basemap], center: [77, 16], zoom: 3.5, maxBounds: [[36, -8], [114, 36]] });
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
     map.on("click", (event: MapMouseEvent) => onSelect({ lat: event.lngLat.lat, lon: event.lngLat.lng }));
     map.on("mousemove", (event: MapMouseEvent) => {
