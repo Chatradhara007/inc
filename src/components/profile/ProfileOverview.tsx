@@ -3,13 +3,14 @@ import type { OceanProfile } from '../../api/types';
 import { ProfileChart } from './ProfileChart';
 
 interface ProfileOverviewProps {
+  field?: string;
   profile: OceanProfile;
   selectedDepth: number | null;
   onSelectDepth: (depth: number) => void;
 }
 
-export function ProfileOverview({ profile, selectedDepth, onSelectDepth }: ProfileOverviewProps) {
-  const [variable, setVariable] = useState<'temperature' | 'salinity'>('temperature');
+export function ProfileOverview({ field, profile, selectedDepth, onSelectDepth }: ProfileOverviewProps) {
+  const variable = field === 'salinity' ? 'salinity' : 'temperature';
 
   return (
     <div className="profile-overview">
@@ -30,21 +31,6 @@ export function ProfileOverview({ profile, selectedDepth, onSelectDepth }: Profi
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
         <div style={{ fontSize: '11px', fontWeight: 600, color: '#a0b0b8', letterSpacing: '0.05em' }}>
           DEPTH PROFILE
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <span 
-            onClick={() => setVariable('temperature')} 
-            style={{ fontSize: '11px', cursor: 'pointer', color: variable === 'temperature' ? '#fff' : '#6d7b82' }}
-          >
-            TEMP
-          </span>
-          <span style={{ fontSize: '11px', color: '#6d7b82' }}>|</span>
-          <span 
-            onClick={() => setVariable('salinity')} 
-            style={{ fontSize: '11px', cursor: 'pointer', color: variable === 'salinity' ? '#fff' : '#6d7b82' }}
-          >
-            SAL
-          </span>
         </div>
       </div>
       

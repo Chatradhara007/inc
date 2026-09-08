@@ -65,12 +65,14 @@ export function ProfilePanel({ field, panelData, profile, isOceanMissing }: Prof
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: '24px' }}>
         {selectedDepth === null ? (
           <ProfileOverview 
+            field={field}
             profile={profile} 
             selectedDepth={selectedDepth} 
             onSelectDepth={setSelectedDepth} 
           />
         ) : (
           <DepthReport 
+            field={field}
             profile={profile} 
             selectedDepth={selectedDepth} 
             onBack={() => setSelectedDepth(null)} 

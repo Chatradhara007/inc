@@ -3,12 +3,13 @@ import type { OceanProfile, DepthProfilePoint } from '../../api/types';
 import { DifferenceSection } from './DifferenceSection';
 
 interface DepthReportProps {
+  field?: string;
   profile: OceanProfile;
   selectedDepth: number;
   onBack: () => void;
 }
 
-export function DepthReport({ profile, selectedDepth, onBack }: DepthReportProps) {
+export function DepthReport({ field, profile, selectedDepth, onBack }: DepthReportProps) {
   const data = profile.depths.find(d => d.depth === selectedDepth);
   
   if (!data) return null;
@@ -44,25 +45,38 @@ export function DepthReport({ profile, selectedDepth, onBack }: DepthReportProps
         <div style={{ fontSize: '11px', fontWeight: 600, color: '#52e0c4', letterSpacing: '0.05em', marginBottom: '12px' }}>
           OCEANEMBED
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: 'rgba(82,224,196,0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(82,224,196,0.1)' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Temperature</div>
-            <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-              {data.oceanEmbed?.temperature !== undefined ? `${data.oceanEmbed.temperature.toFixed(2)} °C` : 'N/A'}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', background: 'rgba(82,224,196,0.05)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(82,224,196,0.1)' }}>
+          {field !== 'salinity' ? (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Temperature</div>
+                <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                  {data.oceanEmbed?.temperature !== undefined ? `${data.oceanEmbed.temperature.toFixed(2)} °C` : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Uncertainty</div>
+                <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                  {data.oceanEmbed?.uncertainty !== undefined ? `±${data.oceanEmbed.uncertainty.toFixed(2)}` : 'N/A'}
+                </div>
+              </div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Salinity</div>
-            <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-              {data.oceanEmbed?.salinity !== undefined ? `${data.oceanEmbed.salinity.toFixed(2)} PSU` : 'N/A'}
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Salinity</div>
+                <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                  {data.oceanEmbed?.salinity !== undefined ? `${data.oceanEmbed.salinity.toFixed(2)} PSU` : 'N/A'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Uncertainty</div>
+                <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                  {data.oceanEmbed?.uncertainty !== undefined ? `±${data.oceanEmbed.uncertainty.toFixed(2)}` : 'N/A'}
+                </div>
+              </div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Uncertainty</div>
-            <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-              {data.oceanEmbed?.uncertainty !== undefined ? `±${data.oceanEmbed.uncertainty.toFixed(2)}` : 'N/A'}
-            </div>
-          </div>
+          )}
         </div>
       </div>
       
@@ -71,26 +85,29 @@ export function DepthReport({ profile, selectedDepth, onBack }: DepthReportProps
         <div style={{ fontSize: '11px', fontWeight: 600, color: '#ff9d5c', letterSpacing: '0.05em', marginBottom: '12px' }}>
           ARMOR3D REFERENCE
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,157,92,0.2)' }}>
-          <div>
-            <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Temperature</div>
-            <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-              {data.armor3d?.temperature !== undefined ? `${data.armor3d.temperature.toFixed(2)} °C` : 'N/A'}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,157,92,0.2)' }}>
+          {field !== 'salinity' ? (
+            <div>
+              <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Temperature</div>
+              <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                {data.armor3d?.temperature !== undefined ? `${data.armor3d.temperature.toFixed(2)} °C` : 'N/A'}
+              </div>
             </div>
-          </div>
-          <div>
-            <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Salinity</div>
-            <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-              {data.armor3d?.salinity !== undefined ? `${data.armor3d.salinity.toFixed(2)} PSU` : 'N/A'}
+          ) : (
+            <div>
+              <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Salinity</div>
+              <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                {data.armor3d?.salinity !== undefined ? `${data.armor3d.salinity.toFixed(2)} PSU` : 'N/A'}
+              </div>
             </div>
-          </div>
+          )}
         </div>
         
         <DifferenceSection 
-          oceanTemp={data.oceanEmbed?.temperature}
-          armorTemp={data.armor3d?.temperature}
-          oceanSal={data.oceanEmbed?.salinity}
-          armorSal={data.armor3d?.salinity}
+          oceanTemp={field !== 'salinity' ? data.oceanEmbed?.temperature : undefined}
+          armorTemp={field !== 'salinity' ? data.armor3d?.temperature : undefined}
+          oceanSal={field === 'salinity' ? data.oceanEmbed?.salinity : undefined}
+          armorSal={field === 'salinity' ? data.armor3d?.salinity : undefined}
         />
       </div>
       
@@ -99,20 +116,23 @@ export function DepthReport({ profile, selectedDepth, onBack }: DepthReportProps
         <div style={{ fontSize: '11px', fontWeight: 600, color: '#fff', letterSpacing: '0.05em', marginBottom: '12px' }}>
           ARGO OBSERVATION
         </div>
-        {data.argo?.temperature !== undefined || data.argo?.salinity !== undefined ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div>
-              <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Temperature</div>
-              <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-                {data.argo?.temperature !== undefined ? `${data.argo.temperature.toFixed(2)} °C` : 'N/A'}
+        {((field !== 'salinity' && data.argo?.temperature !== undefined) || (field === 'salinity' && data.argo?.salinity !== undefined)) ? (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            {field !== 'salinity' ? (
+              <div>
+                <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Temperature</div>
+                <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                  {data.argo?.temperature !== undefined ? `${data.argo.temperature.toFixed(2)} °C` : 'N/A'}
+                </div>
               </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Salinity</div>
-              <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
-                {data.argo?.salinity !== undefined ? `${data.argo.salinity.toFixed(2)} PSU` : 'N/A'}
+            ) : (
+              <div>
+                <div style={{ fontSize: '11px', color: '#a0b0b8' }}>Salinity</div>
+                <div style={{ fontSize: '14px', color: '#fff', marginTop: '4px' }}>
+                  {data.argo?.salinity !== undefined ? `${data.argo.salinity.toFixed(2)} PSU` : 'N/A'}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         ) : (
           <div style={{ fontSize: '13px', color: '#6d7b82', fontStyle: 'italic' }}>
