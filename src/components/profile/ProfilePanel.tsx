@@ -3,12 +3,17 @@ import type { OceanProfile } from '../../api/types';
 import { ProfileOverview } from './ProfileOverview';
 import { DepthReport } from './DepthReport';
 
+import { TchpReport } from './TchpReport';
+import { ScalarReport } from './ScalarReport';
+
 interface ProfilePanelProps {
+  field?: string;
+  panelData?: any;
   profile: OceanProfile | null;
   isOceanMissing: boolean;
 }
 
-export function ProfilePanel({ profile, isOceanMissing }: ProfilePanelProps) {
+export function ProfilePanel({ field, panelData, profile, isOceanMissing }: ProfilePanelProps) {
   const [selectedDepth, setSelectedDepth] = useState<number | null>(null);
 
   if (isOceanMissing) {
@@ -30,8 +35,28 @@ export function ProfilePanel({ profile, isOceanMissing }: ProfilePanelProps) {
     );
   }
 
-  if (!profile) {
+  if (!profile && !panelData) {
     return <div className="empty-profile">Click a water cell to cast a virtual profile.</div>;
+  }
+
+  if (field === 'tchp') {
+    return panelData ? <TchpReport date="2025-01-01" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading TCHP...</div>;
+  }
+
+  if (field === 'mld') {
+    return panelData ? <ScalarReport title="Mixed Layer Depth" unit="m" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading MLD...</div>;
+  }
+
+  if (field === 'd26') {
+    return panelData ? <ScalarReport title="Depth of 26°C Isotherm" unit="m" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading D26...</div>;
+  }
+
+  if (field === 'uncertainty') {
+    return panelData ? <ScalarReport title="Temperature Uncertainty" unit="σ °C" location={panelData.location} data={panelData} /> : <div className="empty-profile">Loading Uncertainty...</div>;
+  }
+
+  if (!profile) {
+    return <div className="empty-profile">Loading Profile...</div>;
   }
 
   return (

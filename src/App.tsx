@@ -44,32 +44,54 @@ export function App() {
   const [points, setPoints] = useState<FieldPoint[]>([]);
   const [floats, setFloats] = useState<ArgoFloat[]>([]);
   const [profile, setProfile] = useState<OceanProfile | null | undefined>();
+  const [panelData, setPanelData] = useState<any>();
   const [status, setStatus] = useState<RunStatus>();
   
   const selectedField = useMemo(() => fieldDefinitions.find((item) => item.id === field)!, [field]);
   const depth = DEPTHS[depthIndex];
 
   useEffect(() => {
-    mockOceanApi.getStatus().then(setStatus);
-    mockOceanApi.getArgoFloats().then(setFloats);
+    mockOceanApi.getStatus('2025-01-01').then(setStatus);
+    mockOceanApi.getArgoFloats('2025-01-01').then(setFloats);
     geoService.loadMask();
   }, []);
   
   useEffect(() => { 
-    void mockOceanApi.getField(field, selectedField.depth ? depth : 0).then(setPoints); 
+    void mockOceanApi.getField('2025-01-01', field, selectedField.depth ? depth : 0).then(setPoints); 
   }, [field, depth, selectedField.depth]);
   
   useEffect(() => { 
     if (selected) {
       if (geoService.isLand(selected.lat, selected.lon)) {
         setProfile(undefined);
+        setPanelData(undefined);
       } else {
-        void mockOceanApi.getProfile(selected).then(setProfile);
+        if (field === 'temperature' || field === 'salinity') {
+          setPanelData(undefined);
+          void mockOceanApi.getProfile('2025-01-01', selected).then(setProfile);
+        } else if (field === 'tchp') {
+          setPanelData(undefined);
+          setProfile(undefined);
+          void mockOceanApi.getTchp('2025-01-01', selected).then(setPanelData);
+        } else if (field === 'mld') {
+          setPanelData(undefined);
+          setProfile(undefined);
+          void mockOceanApi.getMld('2025-01-01', selected).then(setPanelData);
+        } else if (field === 'd26') {
+          setPanelData(undefined);
+          setProfile(undefined);
+          void mockOceanApi.getD26('2025-01-01', selected).then(setPanelData);
+        } else if (field === 'uncertainty') {
+          setPanelData(undefined);
+          setProfile(undefined);
+          void mockOceanApi.getUncertainty('2025-01-01', selected, depth).then(setPanelData);
+        }
       }
     } else {
       setProfile(undefined);
+      setPanelData(undefined);
     }
-  }, [selected]);
+  }, [selected, field, depth]);
 
   const chooseLocation = useCallback((location: Coordinate) => setSelected(location), []);
 
@@ -208,7 +230,7 @@ export function App() {
               </p>
             </div>
           ) : (
-            <ProfilePanel profile={profile ?? null} isOceanMissing={profile === null} />
+            <ProfilePanel field={field} profile={profile ?? null} panelData={panelData ?? null} isOceanMissing={profile === null && panelData === null} />
           )}
         </div>
       </div>

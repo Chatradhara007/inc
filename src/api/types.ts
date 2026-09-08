@@ -29,6 +29,7 @@ export type OceanProfile = {
   depths: DepthProfilePoint[];
   tchp?: number;
   d26?: number;
+  mld?: number;
   confidence?: number;
   nearestArgoKm?: number;
   gateStatus?: string;
@@ -43,8 +44,12 @@ export type RunStatus = {
 };
 
 export interface OceanEmbedApi {
-  getStatus(): Promise<RunStatus>;
-  getField(field: FieldId, depth: number): Promise<FieldPoint[]>;
-  getProfile(location: Coordinate): Promise<OceanProfile | null>;
-  getArgoFloats(): Promise<ArgoFloat[]>;
+  getStatus(date: string): Promise<RunStatus>;
+  getField(date: string, field: FieldId, depth: number): Promise<FieldPoint[]>;
+  getProfile(date: string, location: Coordinate, variable?: string): Promise<OceanProfile | null>;
+  getArgoFloats(date: string): Promise<ArgoFloat[]>;
+  getTchp(date: string, location: Coordinate): Promise<{ value: number; category: string; d26: number; confidence: number; week: string; location: Coordinate } | null>;
+  getD26(date: string, location: Coordinate): Promise<{ value: number; tchp: number; confidence: number; week: string; location: Coordinate } | null>;
+  getMld(date: string, location: Coordinate): Promise<{ value: number; confidence: number; week: string; location: Coordinate } | null>;
+  getUncertainty(date: string, location: Coordinate, depth?: number): Promise<{ value: number; week: string; location: Coordinate; depth?: number } | null>;
 }
